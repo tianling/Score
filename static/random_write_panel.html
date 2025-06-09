@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电影评分随机写入面板</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+        .header {
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .title {
+            margin: 0;
+            color: #1890ff;
+            font-size: 24px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background-color: #1890ff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #52c41a;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #f5222d;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+        .status-container {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .status-running {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        .status-stopped {
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+            color: #f5222d;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .panel {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .panel-title {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+        }
+        .panel-body {
+            padding: 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        th {
+            background-color: #fafafa;
+            font-weight: 500;
+            color: #666;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .tag-success {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        .tag-warning {
+            background-color: #fffbe6;
+            border: 1px solid #ffe58f;
+            color: #faad14;
+        }
+        .tag-error {
+            background-color: #fff1f0;
+            border: 1px solid #ffa39e;
+            color: #f5222d;
+        }
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+        }
+        .badge {
+            display: inline-block;
+            min-width: 20px;
+            padding: 0 6px;
+            border-radius: 10px;
+            background-color: #1890ff;
+            color: white;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            margin-left: 8px;
+        }
+        .statistics {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+        }
+        .stat-item {
+            flex: 1;
+            text-align: center;
+            padding: 15px;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+            margin-bottom: 5px;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">电影评分随机写入控制面板</h1>
+            <div class="controls">
+                <button id="startBtn" class="btn btn-success">开始写入</button>
+                <button id="stopBtn" class="btn btn-danger">停止写入</button>
+                <button id="refreshBtn" class="btn btn-primary">刷新数据</button>
+            </div>
+        </div>
+
+        <div class="status-container">
+            <span>当前状态：</span>
+            <span id="statusText" class="status status-stopped">已停止</span>
+            <span>开始时间：</span>
+            <span id="startTime">-</span>
+            <span>已运行：</span>
+            <span id="runningTime">-</span>
+        </div>
+
+        <div class="statistics">
+            <div class="stat-item">
+                <div class="stat-value" id="totalWrites">0</div>
+                <div class="stat-label">总写入次数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="successRate">0%</div>
+                <div class="stat-label">成功率</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="avgRating">0.0</div>
+                <div class="stat-label">平均评分</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="writeSpeed">0/分钟</div>
+                <div class="stat-label">写入速率</div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">写入日志</h2>
+                    <span class="badge" id="logCount">0</span>
+                </div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>电影ID</th>
+                                <th>用户ID</th>
+                                <th>评分</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="5" class="no-data">暂无数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">热点电影</h2>
+                    <span>最近写入次数最多的电影</span>
+                </div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>排名</th>
+                                <th>电影ID</th>
+                                <th>写入次数</th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hotspotsTableBody">
+                            <tr>
+                                <td colspan="4" class="no-data">暂无数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置API端点
+        const API_BASE_URL = 'http://localhost:5000/api';
+        const API = {
+            start: `${API_BASE_URL}/write/start`,
+            stop: `${API_BASE_URL}/write/stop`,
+            status: `${API_BASE_URL}/write/status`,
+            hotspots: `${API_BASE_URL}/write/hotspots`
+        };
+
+        // 全局变量
+        let isRunning = false;
+        let startTimeStamp = null;
+        let totalWrites = 0;
+        let successWrites = 0;
+        let sumRatings = 0;
+        let updateInterval = null;
+
+        // DOM元素
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const statusText = document.getElementById('statusText');
+        const startTime = document.getElementById('startTime');
+        const runningTime = document.getElementById('runningTime');
+        const totalWritesEl = document.getElementById('totalWrites');
+        const successRateEl = document.getElementById('successRate');
+        const avgRatingEl = document.getElementById('avgRating');
+        const writeSpeedEl = document.getElementById('writeSpeed');
+        const logsTableBody = document.getElementById('logsTableBody');
+        const hotspotsTableBody = document.getElementById('hotspotsTableBody');
+        const logCount = document.getElementById('logCount');
+
+        // 格式化时间
+        function formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString('zh-CN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        // 格式化日期时间
+        function formatDateTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN');
+        }
+
+        // 格式化运行时间
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            const displayHours = hours % 24;
+            const displayMinutes = minutes % 60;
+            const displaySeconds = seconds % 60;
+            
+            return `${displayHours.toString().padStart(2, '0')}:${displayMinutes.toString().padStart(2, '0')}:${displaySeconds.toString().padStart(2, '0')}`;
+        }
+
+        // 更新运行时间
+        function updateRunningTime() {
+            if (startTimeStamp) {
+                const now = new Date();
+                const diff = now - startTimeStamp;
+                runningTime.textContent = formatDuration(diff);
+            }
+        }
+
+        // 获取写入状态
+        async function fetchStatus() {
+            try {
+                const response = await fetch(API.status);
+                if (!response.ok) throw new Error('API请求失败');
+                
+                const data = await response.json();
+                
+                // 更新状态
+                isRunning = data.running;
+                if (isRunning) {
+                    statusText.textContent = '运行中';
+                    statusText.className = 'status status-running';
+                    
+                    if (!startTimeStamp) {
+                        startTimeStamp = new Date();
+                        startTime.textContent = formatDateTime(startTimeStamp);
+                    }
+                    
+                    if (!updateInterval) {
+                        updateInterval = setInterval(updateRunningTime, 1000);
+                    }
+                } else {
+                    statusText.textContent = '已停止';
+                    statusText.className = 'status status-stopped';
+                    
+                    if (updateInterval) {
+                        clearInterval(updateInterval);
+                        updateInterval = null;
+                    }
+                }
+                
+                // 更新日志
+                updateLogs(data.logs || []);
+                
+                return data;
+            } catch (error) {
+                console.error('获取状态失败:', error);
+                return null;
+            }
+        }
+
+        // 获取热点数据
+        async function fetchHotspots() {
+            try {
+                const response = await fetch(API.hotspots);
+                if (!response.ok) throw new Error('API请求失败');
+                
+                const data = await response.json();
+                updateHotspots(data.hotspots || []);
+                
+                return data;
+            } catch (error) {
+                console.error('获取热点数据失败:', error);
+                return null;
+            }
+        }
+
+        // 更新日志表格
+        function updateLogs(logs) {
+            if (logs.length === 0) {
+                logsTableBody.innerHTML = '<tr><td colspan="5" class="no-data">暂无数据</td></tr>';
+                logCount.textContent = '0';
+                return;
+            }
+            
+            logsTableBody.innerHTML = '';
+            logCount.textContent = logs.length;
+            
+            // 重置统计数据
+            totalWrites = logs.length;
+            successWrites = 0;
+            sumRatings = 0;
+            
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                
+                // 计算统计数据
+                if (log.status === 'success') {
+                    successWrites++;
+                    sumRatings += parseFloat(log.rating);
+                }
+                
+                const statusClass = 
+                    log.status === 'success' ? 'tag-success' : 
+                    log.status === 'failed' ? 'tag-error' : 'tag-warning';
+                
+                const timestamp = new Date(log.timestamp);
+                
+                row.innerHTML = `
+                    <td>${formatTime(timestamp)}</td>
+                    <td>${log.movieId}</td>
+                    <td>${log.userId}</td>
+                    <td>${log.rating}</td>
+                    <td><span class="tag ${statusClass}">${log.status}</span></td>
+                `;
+                
+                logsTableBody.appendChild(row);
+            });
+            
+            // 更新统计信息
+            totalWritesEl.textContent = totalWrites;
+            
+            const successRate = totalWrites > 0 ? Math.round((successWrites / totalWrites) * 100) : 0;
+            successRateEl.textContent = `${successRate}%`;
+            
+            const avgRating = successWrites > 0 ? (sumRatings / successWrites).toFixed(1) : '0.0';
+            avgRatingEl.textContent = avgRating;
+            
+            // 计算写入速率
+            if (startTimeStamp && isRunning) {
+                const now = new Date();
+                const minutesElapsed = (now - startTimeStamp) / (1000 * 60);
+                const rate = minutesElapsed > 0 ? Math.round(totalWrites / minutesElapsed) : 0;
+                writeSpeedEl.textContent = `${rate}/分钟`;
+            } else {
+                writeSpeedEl.textContent = '0/分钟';
+            }
+        }
+
+        // 更新热点表格
+        function updateHotspots(hotspots) {
+            if (hotspots.length === 0) {
+                hotspotsTableBody.innerHTML = '<tr><td colspan="4" class="no-data">暂无数据</td></tr>';
+                return;
+            }
+            
+            hotspotsTableBody.innerHTML = '';
+            
+            // 计算总写入次数
+            let totalHotspotWrites = 0;
+            hotspots.forEach(spot => {
+                totalHotspotWrites += spot.count;
+            });
+            
+            hotspots.forEach((spot, index) => {
+                const row = document.createElement('tr');
+                
+                const percentage = totalHotspotWrites > 0 ? Math.round((spot.count / totalHotspotWrites) * 100) : 0;
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${spot.movieId}</td>
+                    <td>${spot.count}</td>
+                    <td>${percentage}%</td>
+                `;
+                
+                hotspotsTableBody.appendChild(row);
+            });
+        }
+
+        // 刷新所有数据
+        async function refreshData() {
+            await fetchStatus();
+            await fetchHotspots();
+        }
+
+        // 开始写入
+        async function startWriting() {
+            try {
+                const response = await fetch(API.start, { method: 'POST' });
+                if (!response.ok) throw new Error('API请求失败');
+                
+                await refreshData();
+                console.log('写入服务已启动');
+            } catch (error) {
+                console.error('启动写入失败:', error);
+                alert('启动写入失败，请检查服务器连接');
+            }
+        }
+
+        // 停止写入
+        async function stopWriting() {
+            try {
+                const response = await fetch(API.stop, { method: 'POST' });
+                if (!response.ok) throw new Error('API请求失败');
+                
+                await refreshData();
+                console.log('写入服务已停止');
+            } catch (error) {
+                console.error('停止写入失败:', error);
+                alert('停止写入失败，请检查服务器连接');
+            }
+        }
+
+        // 绑定事件处理函数
+        startBtn.addEventListener('click', startWriting);
+        stopBtn.addEventListener('click', stopWriting);
+        refreshBtn.addEventListener('click', refreshData);
+
+        // 页面加载时获取初始数据
+        document.addEventListener('DOMContentLoaded', async () => {
+            await refreshData();
+            
+            // 设置自动刷新（每5秒）
+            setInterval(refreshData, 5000);
+        });
+    </script>
+</body>
+</html> 
